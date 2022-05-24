@@ -1,4 +1,3 @@
-const { subscribe } = require("moongose/routes");
 const Contact = require("./schemas/Contact");
 const User = require("./schemas/user");
 
@@ -29,8 +28,8 @@ const updateContactFavorite = async (id, favorite,owner) => {
 const getAllFavorite = async (favorite) => {
   return Contact.find({ favorite: favorite });
 };
-const postNewUser = async (email, password) => {
-  return User.create({ email, password });
+const postNewUser = async (email, password,avatar) => {
+  return User.create({ email, password, avatarUrl:avatar});
 };
 const getUserByEmail = async (email) => {
   return User.findOne({ email: email });
@@ -43,6 +42,10 @@ const getUserById = async (id) => {
 };
 const updateSubscription =async(id,subscription)=>{
   return User.updateOne({_id:id},{subscription:subscription})
+}
+
+const updateAwatars =async (id,avatar)=>{
+  return User.updateOne({id:id},{avatarUrl:avatar})
 }
 module.exports = {
   getAllContacts,
@@ -57,4 +60,5 @@ module.exports = {
   updateUserById,
   getUserById,
   updateSubscription,
+  updateAwatars,
 };

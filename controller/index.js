@@ -120,7 +120,6 @@ const updateContactFavorite = async (req, res, next) => {
 };
 const getAllFavorite = async(req, res, next)=>{
     try {
-      console.log(req.query.favorite);
         const result = await service.getAllFavorite(req.query.favorite);
         res.status(200).json({
           data: {
@@ -132,6 +131,7 @@ const getAllFavorite = async(req, res, next)=>{
         next(e);
       }
 }
+
 
 module.exports = {
   get,
