@@ -17,7 +17,6 @@ app.use(express.static("public"))
 
 app.use('/api/contacts', contactsRouter)
 app.use('/api/users', usersRouter)
-app.use('/avatars',express.static(`${__dirname}`))
 
 
 app.use((req, res) => {

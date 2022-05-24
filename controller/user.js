@@ -139,6 +139,7 @@ const updateAwatars=async(req,res,next)=>{
     await fs.rename(tempDir, resultDir);
     
     const avatarURL = await path.join("avatars", name);
+    console.log(avatarURL);
     await service.updateAwatars(_id, avatarURL);
     res.status(200).json({
       "avatarURL" : avatarURL,
