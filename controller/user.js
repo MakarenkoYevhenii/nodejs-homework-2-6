@@ -197,7 +197,7 @@ const reVerificate=async(req,res,next)=>{
 }
 const verificait = async (req, res, next) => {
   try {
-    const result=await service.getUserByToken(req.params.verificationToken)
+    await service.getUserByToken(req.params.verificationToken)
     res.status(200).json({
       message: 'Verification successful'
     })
