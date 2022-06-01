@@ -14,7 +14,16 @@ const newUserValidation = (data) => {
     password: Joi.string().min(2).max(20).required(),
   });
 
+  return schema.validate(data);
+};
 
+const signup = async (req, res) => {
+  const { error } = newUserValidation(req.body);
+  const { email, password } = req.body;
+  const hashPass = async (password) => {
+    const hashPassword = await bcrypt.hash(password, 10);
+    return hashPassword;
+  };
 
   if (!error) {
     const userVerify=nanoid()
@@ -39,95 +48,80 @@ const newUserValidation = (data) => {
         message: e.message,
       });
     }
+  }
+  res
+    .status(400)
+    .json({ message: "Ошибка от Joi или другой библиотеки валидации" });
+};
 
-    if(!error){
-      try {
-        const result = await service.postNewUser( email,await hashPass(password));
-     
-        return res.status(201).json({
+const login = async (req, res, next) => {
+  const { SECRET_KEY } = process.env;
+  const { error } = newUserValidation(req.body);
+  const { email, password } = req.body;
+  if (!error) {
+    try {
+      const result = await service.getUserByEmail(email);
+      if (await bcrypt.compare(password, result.password)) {
+        const payload = {
+          id: result._id,
+        };
+        const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "10h" });
+        const findAndUpdate = await service.updateUserById(result._id, {
+          token,
+        });
+        return res.status(200).json({
+          token: token,
           user: {
-            email: result.email,
-            subscription: result.subscription,
+            email: findAndUpdate.email,
+            subscription: findAndUpdate.subscription,
           },
         });
-      } catch (e) {
-         return res.status(409).json({
-            message:"Email in use"
-          })
-      }
-    }
-    res.status(400).json( {"message": "Ошибка от Joi или другой библиотеки валидации"});
-  };
-
-const login =async(req,res,next)=>{
-  const {SECRET_KEY} = process.env;
-  const {error}=newUserValidation(req.body)
-  const { email,password } = req.body;
-  if(!error){
-    try {
-      const result=await service.getUserByEmail(email)
-      if(await bcrypt.compare(password, result.password)){
-        const payload = {
-          id: result._id
-      } 
-      const token = jwt.sign(payload, SECRET_KEY, {expiresIn: "10h"});
-      const findAndUpdate=await service.updateUserById(result._id, {token})
-      return res.status(200).json({
-          token: token,
-          user:{
-            email: findAndUpdate.email,
-            subscription: findAndUpdate.subscription
-          }
-        })
-        
       }
       return res.status(401).json({
-        "message": "Email or password is wrong"
-      })
+        message: "Email or password is wrong",
+      });
     } catch (error) {
-      return next(error)
+      return next(error);
     }
   }
-  return res.status(400).json( {"message": "Ошибка от Joi или другой библиотеки валидации"});
-
-}
-const logout =async(req,res,next)=>{
+  return res
+    .status(400)
+    .json({ message: "Ошибка от Joi или другой библиотеки валидации" });
+};
+const logout = async (req, res, next) => {
   try {
-    const {_id} = req.user;
-    await service.updateUserById(_id, {token:""})
-  return  res.status(204).json()
+    const { _id } = req.user;
+    await service.updateUserById(_id, { token: "" });
+    return res.status(204).json();
   } catch (error) {
-    next(error)
+    next(error);
   }
 
-  return res.status(401).json({
-  })
-
-}
-const current =async(req,res,next)=>{
-  const {email, subscription}=(req.user);
+  return res.status(401).json({});
+};
+const current = async (req, res, next) => {
+  const { email, subscription } = req.user;
   try {
     return res.status(200).json({
-     email:email,
-     subscription:subscription,
-    })
+      email: email,
+      subscription: subscription,
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
+};
+const updateSubscription = async (req, res, next) => {
+  const { _id, email } = req.user;
+  const subscription = req.body.subscription;
+  const subscriptionType = ["starter", "pro", "business"];
 
-}
-const updateSubscription =async (req,res,next)=>{
-  const {_id}=req.user
-  const subscription=req.body.subscription
-  const subscriptionType=['starter', 'pro', 'business']
-  
   try {
-    if(subscriptionType.includes(subscription)){
-      await service.updateSubscription(_id,subscription )
+    if (subscriptionType.includes(subscription)) {
+      await service.updateSubscription(_id, subscription);
       return res.status(200).json({
-        email:req.user.email,
-        subscription:subscription,
-       })
+        email: email,
+        subscription: subscription,
+      });
     }
     return res.status(400).json({
       message: "use only:starte,pro,buiness",
