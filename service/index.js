@@ -29,8 +29,8 @@ const updateContactFavorite = async (id, favorite,owner) => {
 const getAllFavorite = async (favorite) => {
   return Contact.find({ favorite: favorite });
 };
-const postNewUser = async (email, password) => {
-  return User.create({ email, password });
+const postNewUser = async (email, password,avatar,verificationToken) => {
+  return User.create({ email, password, avatarUrl:avatar,verificationToken:verificationToken});
 };
 const getUserByEmail = async (email) => {
   return User.findOne({ email: email });
@@ -44,6 +44,13 @@ const getUserById = async (id) => {
 const updateSubscription =async(id,subscription)=>{
   return User.updateOne({_id:id},{subscription:subscription})
 }
+
+const updateAwatars =async (id,avatar)=>{
+  return User.updateOne({id:id},{avatarUrl:avatar})
+}
+const getUserByToken = async (verificationToken) => {
+  return User.updateOne({ verificationToken: verificationToken },{verificationToken:null,verify:true});
+};
 module.exports = {
   getAllContacts,
   getContactById,
@@ -57,4 +64,6 @@ module.exports = {
   updateUserById,
   getUserById,
   updateSubscription,
+  updateAwatars,
+  getUserByToken,
 };
