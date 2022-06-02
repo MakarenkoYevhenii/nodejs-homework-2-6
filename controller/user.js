@@ -3,8 +3,11 @@ const service = require("../service");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const gravatar = require("gravatar");
-const path  = require("path");
-const fs=require("fs/promises")
+const path = require("path");
+const fs = require("fs/promises");
+const nodemailer = require("nodemailer");
+const { nanoid } = require("nanoid");
+
 const newUserValidation = (data) => {
   const schema = Joi.object({
     email: Joi.string().min(2).max(255).required().email(),
@@ -23,13 +26,16 @@ const signup = async (req, res) => {
   };
 
   if (!error) {
+    const userVerify=nanoid()
     try {
+    
       const result = await service.postNewUser(
         email,
         await hashPass(password),
-        gravatar.url(email)
+        gravatar.url(email),
+        userVerify
       );
-
+      verification(email,userVerify)
       return res.status(201).json({
         user: {
           email: result.email,
@@ -39,7 +45,7 @@ const signup = async (req, res) => {
       });
     } catch (e) {
       return res.status(409).json({
-        message: "Email in use",
+        message: e.message,
       });
     }
   }
@@ -125,30 +131,82 @@ const updateSubscription = async (req, res, next) => {
   }
 };
 
-
-const updateAwatars=async(req,res,next)=>{
+const updateAwatars = async (req, res, next) => {
   const avatarsDir = path.join(__dirname, "../", "public", "avatars");
 
-  
   try {
-    const {_id} = req.user;
-    const {path: tempDir, filename} = req.file;
+    const { _id } = req.user;
+    const { path: tempDir, filename } = req.file;
     const [extension] = filename.split(".").reverse();
-    const name =`${_id}.${extension}`;
+    const name = `${_id}.${extension}`;
     const resultDir = path.join(avatarsDir, name);
     await fs.rename(tempDir, resultDir);
-    
+
     const avatarURL = await path.join("avatars", name);
     console.log(avatarURL);
     await service.updateAwatars(_id, avatarURL);
     res.status(200).json({
-      "avatarURL" : avatarURL,
-  })
-  } catch (error) {
+      avatarURL: avatarURL,
+    });
+  } catch (error) {}
+};
 
+const verification = async (userEmail,userVerify) => {
+  const nodemailerConfig = {
+    host: "smtp.meta.ua",
+    port: 465,
+    secure: true,
+    auth: { user: "sdfsdfsdfsdfe@meta.ua", pass: "ch54eZP53V" },
+  
+  };
+  const transporter = nodemailer.createTransport(nodemailerConfig);
+  const email = {
+    from: "sdfsdfsdfsdfe@meta.ua",
+    to: userEmail,
+    subject: "Первое письмо",
+    html: `итак для обучения ннужна эта штука перейди сюда пж localhost:3000/api/users/verify/${userVerify}`,
+  };
+
+    await transporter
+    .sendMail(email)
+    .then(() => {
+      console.log("all good");
+    })
+    .catch((e) => {
+     console.log(e.message); 
+    });
+};
+const reVerificate=async(req,res,next)=>{
+  console.log(req.body.email);
+  try {
+    const result=await service.getUserByEmail(req.body.email)
+    console.log(result);
+    if(result.verify){
+    return res.status(400).json({
+      message: 'Verification has already been passed'
+    })}
+   verification(result.email,result.verificationToken)
+   res.status(200).json({
+     "message":"Verification email sent"
+   })
+  } catch (error) {
+    res.status(400 ).json({
+      message: 'Ошибка от Joi или другой библиотеки валидации'
+    })
   }
 }
-
+const verificait = async (req, res, next) => {
+  try {
+    await service.getUserByToken(req.params.verificationToken)
+    res.status(200).json({
+      message: 'Verification successful'
+    })
+  } catch (error) {
+    res.status(404).json({
+      message: 'User not found'
+    })
+  }
+};
 module.exports = {
   signup,
   login,
@@ -156,4 +214,7 @@ module.exports = {
   current,
   updateSubscription,
   updateAwatars,
+  verification,
+  verificait,
+  reVerificate,
 };
